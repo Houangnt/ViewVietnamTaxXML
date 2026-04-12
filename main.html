@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xem & Xuất PDF – Chứng Từ Nộp Thuế</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+:root{--navy:#003087;--navy-light:#e8edf8;--navy-mid:#c5d3ef;--border:#dde3ed;--text:#1a1a2e;--muted:#6b7280;--green:#1a7f3c;--green-bg:#e8f5ee;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Be Vietnam Pro',Arial,sans-serif;background:#eef2f9;color:var(--text);min-height:100vh;}
+
+/* UPLOAD */
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
+.app-logo{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:2.5rem;opacity:.6;}
+.drop-card{background:#fff;border-radius:20px;border:2px dashed var(--navy-mid);padding:3.5rem 3rem;text-align:center;cursor:pointer;max-width:460px;width:100%;transition:border-color .2s,background .2s,transform .15s;box-shadow:0 4px 24px rgba(0,48,135,.07);}
+.drop-card:hover,.drop-card.drag{border-color:var(--navy);background:var(--navy-light);transform:translateY(-2px);}
+.drop-card input{display:none;}
+.drop-icon{font-size:48px;margin-bottom:1rem;}
+.drop-title{font-size:17px;font-weight:700;margin-bottom:.4rem;color:var(--navy);}
+.drop-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.drop-btn{display:inline-block;margin-top:1.5rem;background:var(--navy);color:#fff;padding:.55rem 1.6rem;border-radius:8px;font-size:13px;font-weight:600;}
+#error-msg{color:#c0392b;font-size:13px;margin-top:1rem;display:none;}
+
+/* VIEW */
+#view-screen{display:none;background:#eef2f9;min-height:100vh;}
+.topbar{background:var(--navy);color:#fff;padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.15);}
+.topbar-title{font-size:14px;font-weight:700;letter-spacing:.04em;opacity:.9;}
+.topbar-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+.btn{padding:.4rem 1rem;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn-white{background:#fff;color:var(--navy);}
+.btn-ghost{background:rgba(255,255,255,.15);color:#fff;}
+.btn-white:hover{opacity:.9;}
+.btn-ghost:hover{background:rgba(255,255,255,.25);}
+.page-wrap{max-width:860px;margin:0 auto;padding:2rem 1rem 3rem;}
+
+/* DOCUMENT */
+.doc-header{background:#fff;border-radius:16px 16px 0 0;border:1px solid var(--border);border-bottom:none;padding:1.75rem 2.5rem 1.5rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;}
+.vn-header{text-align:center;}
+.vn-top{font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:2px;}
+.vn-slogan{font-size:10px;color:var(--muted);font-style:italic;}
+.vn-line{border-top:1px solid var(--text);width:60%;margin:4px auto 0;}
+.doc-stamp{text-align:right;font-size:11px;color:var(--muted);line-height:1.8;}
+.doc-stamp strong{color:var(--text);font-weight:600;}
+.doc-title-block{background:#fff;border:1px solid var(--border);border-top:none;border-bottom:none;padding:1.25rem 2.5rem 1.5rem;text-align:center;}
+.doc-main-title{font-size:18px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.doc-main-sub{font-size:12px;color:var(--muted);font-style:italic;}
+.doc-divider{border:none;border-top:3px solid var(--navy);margin:0;}
+.doc-body{background:#fff;border:1px solid var(--border);border-top:none;padding:0 2.5rem;}
+
+.section{padding:1.25rem 0;border-bottom:1px solid var(--border);}
+.section:last-child{border-bottom:none;}
+.section-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--navy);display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--navy-mid);}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem 3rem;}
+.field.full{grid-column:1/-1;}
+.field-label{font-size:11px;color:var(--muted);margin-bottom:2px;}
+.field-value{font-size:13px;font-weight:600;color:var(--text);line-height:1.5;}
+
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-weight:600;font-size:11px;color:#fff;background:var(--navy);padding:.65rem .85rem;white-space:nowrap;}
+td{padding:.6rem .85rem;border-bottom:1px solid var(--border);vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr:nth-child(even) td{background:var(--navy-light);}
+.ta-c{text-align:center;}
+.ta-r{text-align:right;}
+
+.amount-row{background:var(--navy-light);border-radius:10px;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-top:.75rem;}
+.amount-lbl{font-size:12px;color:var(--muted);}
+.amount-words{font-size:12px;color:var(--navy);font-style:italic;font-weight:600;margin-top:2px;}
+.amount-num{font-size:24px;font-weight:800;color:var(--navy);}
+.amount-unit{font-size:13px;font-weight:600;color:var(--muted);margin-left:3px;}
+
+.sign-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;padding:1.5rem 0 .5rem;}
+.sign-block{text-align:center;}
+.sign-t{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.sign-s{font-size:10px;color:var(--muted);font-style:italic;margin-bottom:1rem;}
+.sign-space{height:44px;border-bottom:1px dashed var(--border);margin-bottom:.5rem;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;}
+.signed-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:20px;font-weight:700;}
+.sign-name{font-size:10px;color:var(--muted);margin-top:4px;}
+
+.doc-footer{background:#fff;border:1px solid var(--border);border-top:2px solid var(--navy-mid);border-radius:0 0 16px 16px;padding:.75rem 2.5rem;font-size:10px;color:var(--muted);line-height:1.7;}
+
+@media(max-width:600px){
+  .doc-header,.doc-title-block,.doc-body,.doc-footer{padding-left:1.25rem;padding-right:1.25rem;}
+  .field-grid{grid-template-columns:1fr;}
+  .field.full{grid-column:1;}
+  .sign-grid{grid-template-columns:1fr;gap:1rem;}
+  .doc-main-title{font-size:15px;}
+  .amount-num{font-size:18px;}
+  .topbar{padding:.65rem 1rem;}
+}
+@media print{
+  body{background:#fff;}
+  .topbar{display:none;}
+  .page-wrap{padding:0;max-width:100%;}
+  #view-screen{background:#fff;}
+  .doc-header,.doc-title-block,.doc-body,.doc-footer{border-radius:0!important;}
+}
+</style>
+</head>
+<body>
+
+<div id="upload-screen">
+  <div class="app-logo">Công cụ xem chứng từ nộp thuế điện tử</div>
+  <div class="drop-card" id="drop-zone" onclick="document.getElementById('fi').click()">
+    <input type="file" id="fi" accept=".xml">
+    <div class="drop-icon">📄</div>
+    <div class="drop-title">Kéo thả file XML vào đây</div>
+    <div class="drop-sub">Hoặc bấm để chọn file từ máy tính</div>
+    <span class="drop-btn">Chọn file XML</span>
+  </div>
+  <div id="error-msg"></div>
+</div>
+
+<div id="view-screen">
+  <div class="topbar">
+    <span class="topbar-title">📄 Chứng Từ Nộp Thuế Điện Tử</span>
+    <div class="topbar-actions">
+      <button class="btn btn-white" onclick="exportPDF()">⬇ Xuất PDF</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨 In</button>
+      <button class="btn btn-ghost" onclick="resetApp()">↩ Mở file khác</button>
+    </div>
+  </div>
+  <div class="page-wrap"><div id="document"></div></div>
+</div>
+
+<script>
+const dz=document.getElementById('drop-zone'),fi=document.getElementById('fi'),errEl=document.getElementById('error-msg');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0]);});
+fi.addEventListener('change',()=>{if(fi.files[0])load(fi.files[0]);});
+
+function g(doc,tag){const el=doc.querySelector(tag);return el?el.textContent.trim():'';}
+function fmt(n){const num=parseInt((n||'').toString().replace(/\D/g,''));return isNaN(num)?(n||''):num.toLocaleString('vi-VN');}
+function fmtKy(ky){return ky.replace(/^00\/Q(\d)\/(\d{4})$/,'Quý $1/$2');}
+function fmtHthuc(c){return c==='CK'?'Chuyển khoản':c;}
+
+function toWords(n){
+  if(!n)return'không đồng';
+  const ones=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+  const teens=['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'];
+  const tens=['','','hai mươi','ba mươi','bốn mươi','năm mươi','sáu mươi','bảy mươi','tám mươi','chín mươi'];
+  function h(x){if(x===0)return'';if(x<10)return ones[x];if(x<20)return teens[x-10];if(x%10===0)return tens[Math.floor(x/10)];return tens[Math.floor(x/10)]+' '+ones[x%10];}
+  let s='';
+  const ty=Math.floor(n/1e9),tr=Math.floor((n%1e9)/1e6),ng=Math.floor((n%1e6)/1e3),le=n%1e3;
+  if(ty)s+=h(ty)+' tỷ ';if(tr)s+=h(tr)+' triệu ';if(ng)s+=h(ng)+' nghìn ';if(le)s+=h(le)+' ';
+  const r=s.trim();return r.charAt(0).toUpperCase()+r.slice(1)+' đồng chẵn';
+}
+
+let D=null;
+
+function load(file){
+  errEl.style.display='none';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const parser=new DOMParser();
+      const doc=parser.parseFromString(e.target.result,'text/xml');
+      if (!doc.querySelector('MAHIEU_CTU') && !doc.querySelector('SO_CTU')) {throw new Error('Không phải file chứng từ nộp thuế hợp lệ.');}
+      D=extract(doc);render(D);
+      document.getElementById('upload-screen').style.display='none';
+      document.getElementById('view-screen').style.display='block';
+    }catch(ex){errEl.textContent='⚠ '+ex.message;errEl.style.display='block';}
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function extract(doc){
+  const rows=[];
+  doc.querySelectorAll('ROW_CTIET').forEach(r=>{rows.push({ndung:r.querySelector('NDUNG_NOP')?.textContent||'',maNdkt:r.querySelector('MA_NDKT')?.textContent||'',maChuong:r.querySelector('MA_CHUONG')?.textContent||'',kyThue:r.querySelector('KY_THUE')?.textContent||'',tien:r.querySelector('TIEN_PNOP')?.textContent||'',});});
+  return{soCtu:g(doc,'MAHIEU_CTU')||g(doc,'SO_CTU'),ngayLap:g(doc,'NGAY_LAP'),idCtu:g(doc,'ID_CTU'),soGnt:g(doc,'SO_GNT'),hthucNop:g(doc,'HTHUC_NOP'),mstNnop:g(doc,'MST_NNOP'),tenNnop:g(doc,'TEN_NNOP'),diachiNnop:g(doc,'DIACHI_NNOP'),tinhNnop:g(doc,'TEN_TINH_NNOP'),huyenNnop:g(doc,'TEN_HUYEN_NNOP'),nhangNop:g(doc,'TEN_NHANG_NOP'),stkNop:g(doc,'STK_NHANG_NOP'),nhangUnt:g(doc,'TEN_NHANG_UNT'),kbac:g(doc,'TEN_KBAC'),stkThu:g(doc,'STK_THU'),cqthu:g(doc,'TEN_CQTHU'),cqt:g(doc,'TEN_CQT'),dbhcThu:g(doc,'TEN_DBHC_THU'),tinhKbac:g(doc,'TEN_TINH_KBAC'),thamChieu:g(doc,'MA_THAMCHIEU'),tongTien:g(doc,'TONG_TIEN'),rows};
+}
+
+function render(d){
+  const tienNum=parseInt(d.tongTien)||0;
+  const tableRows=d.rows.map(r=>`<tr><td>${r.ndung}</td><td class="ta-c">${r.maNdkt}</td><td class="ta-c">${r.maChuong}</td><td class="ta-c">${fmtKy(r.kyThue)}</td><td class="ta-r" style="font-weight:700">${fmt(r.tien)}</td></tr>`).join('');
+  const addr=d.diachiNnop+(d.huyenNnop?', '+d.huyenNnop:'')+(d.tinhNnop?', '+d.tinhNnop:'');
+  document.getElementById('document').innerHTML=`
+  <div class="doc-header">
+    <div class="vn-header">
+      <div class="vn-top">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+      <div class="vn-slogan">Độc lập – Tự do – Hạnh phúc</div>
+      <div class="vn-line"></div>
+    </div>
+    <div class="doc-stamp">Số chứng từ: <strong>${d.soCtu}</strong><br>Ngày lập: <strong>${d.ngayLap}</strong><br>ID: <strong>${d.idCtu}</strong></div>
+  </div>
+  <div class="doc-title-block">
+    <div class="doc-main-title">Giấy Nộp Tiền Vào Ngân Sách Nhà Nước</div>
+    <div class="doc-main-sub">(Dùng cho trường hợp nộp thuế điện tử – Ký số)</div>
+  </div>
+  <hr class="doc-divider">
+  <div class="doc-body">
+    <div class="section">
+      <div class="section-title">Thông tin chung</div>
+      <div class="field-grid">
+        <div class="field"><div class="field-label">Hình thức nộp</div><div class="field-value">${fmtHthuc(d.hthucNop)}</div></div>
+        <div class="field"><div class="field-label">Mã tham chiếu</div><div class="field-value">${d.thamChieu}</div></div>
+        ${d.soGnt?`<div class="field full"><div class="field-label">Số GNT</div><div class="field-value">${d.soGnt}</div></div>`:''}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Người nộp thuế</div>
+      <div class="field-grid">
+        <div class="field"><div class="field-label">Mã số thuế</div><div class="field-value">${d.mstNnop}</div></div>
+        <div class="field"><div class="field-label">Tỉnh / Thành phố</div><div class="field-value">${d.tinhNnop}</div></div>
+        <div class="field full"><div class="field-label">Tên người nộp</div><div class="field-value">${d.tenNnop}</div></div>
+        <div class="field full"><div class="field-label">Địa chỉ</div><div class="field-value">${addr}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Ngân hàng & Kho bạc nhà nước</div>
+      <div class="field-grid">
+        <div class="field full"><div class="field-label">Ngân hàng nộp tiền</div><div class="field-value">${d.nhangNop}</div></div>
+        <div class="field"><div class="field-label">Số tài khoản nộp</div><div class="field-value">${d.stkNop}</div></div>
+        <div class="field"><div class="field-label">Tài khoản thu (KBNN)</div><div class="field-value">${d.stkThu}</div></div>
+        <div class="field full"><div class="field-label">Ngân hàng ủy nhiệm thu</div><div class="field-value">${d.nhangUnt}</div></div>
+        <div class="field full"><div class="field-label">Kho bạc nhà nước</div><div class="field-value">${d.kbac}${d.tinhKbac?' — '+d.tinhKbac:''}</div></div>
+        <div class="field full"><div class="field-label">Cơ quan thuế</div><div class="field-value">${d.cqt}</div></div>
+        <div class="field full"><div class="field-label">Cơ quan thu / Địa bàn</div><div class="field-value">${d.cqthu}${d.dbhcThu?' ('+d.dbhcThu+')':''}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Nội dung khoản nộp</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Nội dung nộp</th><th class="ta-c">Mã NDKT</th><th class="ta-c">Mã chương</th><th class="ta-c">Kỳ thuế</th><th class="ta-r">Số tiền (VNĐ)</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <div class="amount-row">
+        <div><div class="amount-lbl">Tổng số tiền phải nộp</div><div class="amount-words">${toWords(tienNum)}</div></div>
+        <div><span class="amount-num">${fmt(d.tongTien)}</span><span class="amount-unit">đ</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sign-grid">
+        <div class="sign-block"><div class="sign-t">Người nộp tiền</div><div class="sign-s">(Ký, ghi rõ họ tên)</div><div class="sign-space"><span class="signed-badge">✓ Đã ký số</span></div><div class="sign-name">${d.tenNnop}</div><div class="sign-name" style="font-size:9px">MST: ${d.mstNnop}</div></div>
+        <div class="sign-block"><div class="sign-t">Ngân hàng</div><div class="sign-s">(Ký, đóng dấu)</div><div class="sign-space"><span class="signed-badge">✓ Đã ký số</span></div><div class="sign-name">${d.nhangNop.split('–')[0].trim()}</div></div>
+        <div class="sign-block"><div class="sign-t">Kho bạc nhà nước</div><div class="sign-s">(Ký, đóng dấu)</div><div class="sign-space"></div><div class="sign-name">${d.kbac}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="doc-footer">Chứng từ được xác thực bằng chữ ký số điện tử &nbsp;|&nbsp; Ngày lập: ${d.ngayLap} &nbsp;|&nbsp; Mã tham chiếu: ${d.thamChieu} &nbsp;|&nbsp; ID: ${d.idCtu}</div>`;
+}
+
+function resetApp(){document.getElementById('upload-screen').style.display='flex';document.getElementById('view-screen').style.display='none';document.getElementById('document').innerHTML='';fi.value='';D=null;}
+
+function exportPDF(){
+  if(!D)return;
+  const d=D;
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,ml=15,mr=15,cw=W-ml-mr;
+  let y=18;
+
+  function t(text,x,yy,opts={}){pdf.text(text||'',x,yy,opts);}
+
+  // Header
+  pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(30,30,30);
+  t('CONG HOA XA HOI CHU NGHIA VIET NAM',W/2,y,{align:'center'});y+=5;
+  pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(100,100,100);
+  t('Doc lap - Tu do - Hanh phuc',W/2,y,{align:'center'});y+=2;
+  pdf.setDrawColor(30,30,30);pdf.line(W/2-22,y,W/2+22,y);y+=7;
+  pdf.setFontSize(8);pdf.setTextColor(110,110,110);
+  t('So chung tu: '+d.soCtu,W-mr,18,{align:'right'});
+  t('Ngay lap: '+d.ngayLap,W-mr,23,{align:'right'});
+
+  // Title
+  pdf.setFont('helvetica','bold');pdf.setFontSize(14);pdf.setTextColor(0,48,135);
+  t('GIAY NOP TIEN VAO NGAN SACH NHA NUOC',W/2,y,{align:'center'});y+=5;
+  pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(120,120,120);
+  t('(Dung cho truong hop nop thue dien tu - Ky so)',W/2,y,{align:'center'});y+=4;
+  pdf.setDrawColor(0,48,135);pdf.setLineWidth(.6);pdf.line(ml,y,W-mr,y);pdf.setLineWidth(.2);y+=6;
+
+  function secTitle(title){
+    pdf.setFillColor(0,48,135);pdf.rect(ml,y-3.5,cw,6,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(255,255,255);
+    t(title,ml+3,y+.5);y+=7;pdf.setTextColor(30,30,30);
+  }
+  function field(label,value,x,w){
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(120,120,120);t(label,x,y);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(20,20,20);
+    const lines=pdf.splitTextToSize(value||'—',w-2);pdf.text(lines,x,y+4);
+    return lines.length*4.5+2;
+  }
+  function two(l1,v1,l2,v2){const h1=field(l1,v1,ml,cw/2-5),h2=field(l2,v2,ml+cw/2+5,cw/2-5);y+=Math.max(h1,h2)+3;}
+  function one(label,value){y+=field(label,value,ml,cw)+3;}
+  function sep(){pdf.setDrawColor(210,218,237);pdf.setLineWidth(.2);pdf.line(ml,y,W-mr,y);y+=4;}
+
+  secTitle('I. THONG TIN CHUNG');
+  two('Hinh thuc nop',fmtHthuc(d.hthucNop),'Ma tham chieu',d.thamChieu);
+  if(d.soGnt)one('So GNT',d.soGnt);
+  sep();
+
+  secTitle('II. NGUOI NOP THUE');
+  two('Ma so thue',d.mstNnop,'Tinh / Thanh pho',d.tinhNnop);
+  one('Ten nguoi nop thue',d.tenNnop);
+  const addr=d.diachiNnop+(d.huyenNnop?', '+d.huyenNnop:'')+(d.tinhNnop?', '+d.tinhNnop:'');
+  one('Dia chi',addr);sep();
+
+  secTitle('III. NGAN HANG & KHO BAC NHA NUOC');
+  one('Ngan hang nop tien',d.nhangNop);
+  two('So tai khoan nop',d.stkNop,'Tai khoan thu (KBNN)',d.stkThu);
+  one('Ngan hang uy nhiem thu',d.nhangUnt);
+  one('Kho bac nha nuoc',d.kbac+(d.tinhKbac?' - '+d.tinhKbac:''));
+  one('Co quan thue',d.cqt);
+  one('Co quan thu / Dia ban',d.cqthu+(d.dbhcThu?' ('+d.dbhcThu+')':''));sep();
+
+  secTitle('IV. NOI DUNG KHOAN NOP');
+  const colW=[80,18,20,30,32],colX=[ml];
+  for(let i=0;i<colW.length-1;i++)colX.push(colX[i]+colW[i]);
+  const aligns=['left','center','center','center','right'];
+  pdf.setFillColor(0,48,135);pdf.rect(ml,y,cw,6.5,'F');
+  pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(255,255,255);
+  ['Noi dung nop','Ma NDKT','Ma chuong','Ky thue','So tien (VND)'].forEach((h,i)=>{
+    const xa=aligns[i]==='right'?colX[i]+colW[i]-1:aligns[i]==='center'?colX[i]+colW[i]/2:colX[i]+1;
+    t(h,xa,y+4.3,{align:aligns[i]});
+  });y+=6.5;
+  pdf.setFont('helvetica','normal');pdf.setFontSize(8);
+  d.rows.forEach((r,idx)=>{
+    const ndLines=pdf.splitTextToSize(r.ndung,colW[0]-2);
+    const rowH=Math.max(ndLines.length*4.2,7);
+    if(idx%2===0){pdf.setFillColor(240,244,255);pdf.rect(ml,y,cw,rowH+2,'F');}
+    pdf.setDrawColor(210,218,237);pdf.line(ml,y+rowH+2,W-mr,y+rowH+2);
+    pdf.setTextColor(20,20,20);pdf.text(ndLines,colX[0]+1,y+4.5);
+    ['',r.maNdkt,r.maChuong,fmtKy(r.kyThue),fmt(r.tien)].forEach((v,i)=>{
+      if(i===0)return;
+      const xa=aligns[i]==='right'?colX[i]+colW[i]-1:aligns[i]==='center'?colX[i]+colW[i]/2:colX[i]+1;
+      t(v,xa,y+4.5,{align:aligns[i]});
+    });y+=rowH+2;
+  });
+  y+=2;
+  pdf.setFillColor(0,48,135);pdf.rect(ml,y,cw,8,'F');
+  pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(255,255,255);
+  t('TONG CONG',ml+2,y+5.2);t(fmt(d.tongTien)+' d',W-mr-1,y+5.2,{align:'right'});y+=10;
+  pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(0,48,135);
+  t('Bang chu: '+toWords(parseInt(d.tongTien)||0),ml,y);y+=10;
+
+  // Signatures
+  pdf.setDrawColor(210,218,237);pdf.setLineWidth(.4);pdf.line(ml,y-3,W-mr,y-3);
+  const sigCols=[ml,ml+cw/3,ml+(2*cw)/3];
+  const sigLabels=['NGUOI NOP TIEN','NGAN HANG','KHO BAC NHA NUOC'];
+  const sigSubs=['(Ky, ghi ro ho ten)','(Ky, dong dau)','(Ky, dong dau)'];
+  const sigNames=[d.tenNnop,d.nhangNop.split('–')[0].trim(),d.kbac];
+  sigCols.forEach((sx,i)=>{
+    const cx=sx+cw/3/2;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(0,48,135);t(sigLabels[i],cx,y+3,{align:'center'});
+    pdf.setFont('helvetica','italic');pdf.setFontSize(7);pdf.setTextColor(130,130,130);t(sigSubs[i],cx,y+7,{align:'center'});
+    if(i<2){pdf.setFillColor(232,245,238);pdf.rect(cx-14,y+20,28,5.5,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(26,127,60);t('Da ky so dien tu',cx,y+23.5,{align:'center'});}
+    const nameLines=pdf.splitTextToSize(sigNames[i],cw/3-4);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(40,40,40);
+    pdf.text(nameLines,cx,y+30,{align:'center'});
+  });y+=38;
+
+  // Footer
+  pdf.setDrawColor(197,211,239);pdf.setLineWidth(.4);pdf.line(ml,y,W-mr,y);y+=4;
+  pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(150,150,150);
+  t('Chung tu duoc xac thuc bang chu ky so dien tu  |  Ngay lap: '+d.ngayLap+'  |  Ma tham chieu: '+d.thamChieu+'  |  ID: '+d.idCtu,W/2,y,{align:'center'});
+
+  pdf.save('ChungTu_'+( d.soCtu||'xuat')+'.pdf');
+}
+</script>
+</body>
+</html>
