@@ -1,0 +1,25 @@
+Đặt ở MCP proxy
+$sandboxStarted = $false
+
+while ($true) {
+    $line = [Console]::In.ReadLine()
+    if ($null -eq $line) { break }
+    
+    $request = $line | ConvertFrom-Json
+
+    # Chỉ mở sandbox khi method là tools/call
+    if ($request.method -eq "tools/call" -and -not $sandboxStarted) {
+        Start-Process "WindowsSandbox.exe"
+        Start-Sleep -Seconds 5  # đợi boot
+        $sandboxStarted = $true
+        # connect SSE tới sandbox ở đây
+    }
+
+    # Với initialize, tools/list → trả lời bình thường không cần sandbox
+    # forward request vào sandbox nếu đã mở, còn không thì handle local
+}
+
+initialize        → KHÔNG mở sandbox
+notifications/*   → KHÔNG mở sandbox  
+tools/list        → KHÔNG mở sandbox
+tools/call        → MỞ sandbox (lần đầu tiên thôi)
