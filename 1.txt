@@ -23,3 +23,10 @@ initialize        → KHÔNG mở sandbox
 notifications/*   → KHÔNG mở sandbox  
 tools/list        → KHÔNG mở sandbox
 tools/call        → MỞ sandbox (lần đầu tiên thôi)
+
+t có một PowerShell script làm MCP bridge cho Codex CLI với flow:
+Codex → (stdio) → PS Script → Proxy → (SSE) → Windows-MCP (trong Windows Sandbox)
+Vấn đề: Sandbox đang tự mở khi Codex khởi động vì PS script mở sandbox ngay từ đầu.
+Yêu cầu: Chỉ mở sandbox khi có tools/call, không mở khi initialize hay tools/list.
+Lỗi hiện tại: Khi lazy init (chỉ mở sandbox lúc tools/call), proxy connect vào windows-mcp bị transport closed vì thiếu handshake. Cần proxy tự chạy lại initialize → tools/list với windows-mcp sau khi sandbox boot xong, trước khi forward tools/call.
+Hãy xem PS script này và fix đúng chỗ:
