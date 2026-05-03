@@ -1,9 +1,34 @@
-cùng PID mà vẫn bị closed, khả năng cao là một trong hai:
+Khả năng cao nhất là session ID / request ID không khớp.
 
-Stdout bị flush không đúng —  write result ra stdout nhưng buffer chưa được flush, Codex timeout rồi đóng connection trước khi nhận được
-JSON-RPC response format sai — thiếu field, sai id, hoặc format không khớp với cái Codex expect, Codex coi là invalid rồi drop connection
-Sandbox boot time quá lâu — Codex có tool_timeout_sec mặc định 60s, nếu sandbox boot + thực thi vượt quá đó thì Codex tự đóng
-$stdout = [System.Console]::OpenStandardOutput()
-$writer = [System.IO.StreamWriter]::new($stdout)
-$writer.AutoFlush = $true
-[System.Console]::SetOut($writer)
+Khi Codex gửi tool/call xuống, nó đính kèm một id trong JSON-RPC:
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{...}}
+Codex đang giữ id=5 đó chờ response. Nhưng vì proxy của chạy lại initialize → tools/list → tool/call với Windows-MCP như một session mới, Windows-MCP trả về result với id của session mới đó — không phải id=5 mà Codex đang chờ.
+Khi proxy forward result đó lên Codex với sai id → Codex không nhận ra → transport closed.
+
+Proxy cần map và rewrite id:
+
+# Khi nhận request từ Codex
+$request = Read-JsonRpc  # từ Codex
+$codexId = $request.id   # lưu lại id gốc
+
+# Gửi xuống Windows-MCP (id có thể bị reset)
+$result = Send-ToWindowsMCP $request
+
+# Rewrite id trước khi trả về Codex
+$result.id = $codexId    # gán lại id gốc của Codex
+
+# Forward lên Codex
+Write-JsonRpc $result
+[Console]::Out.Flush()
+
+$global:WindowsMCPConnected = $false
+
+# Khi nhận tool/call từ Codex
+if (-not $global:WindowsMCPConnected) {
+    # Lần đầu: chạy initialize + tools/list + tool/call
+    Initialize-WindowsMCP
+    $global:WindowsMCPConnected = $true
+} else {
+    # Lần sau: gửi thẳng tool/call
+    # không initialize lại
+}
