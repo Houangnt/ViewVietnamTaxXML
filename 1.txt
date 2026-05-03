@@ -1,1 +1,9 @@
+cùng PID mà vẫn bị closed, khả năng cao là một trong hai:
 
+Stdout bị flush không đúng —  write result ra stdout nhưng buffer chưa được flush, Codex timeout rồi đóng connection trước khi nhận được
+JSON-RPC response format sai — thiếu field, sai id, hoặc format không khớp với cái Codex expect, Codex coi là invalid rồi drop connection
+Sandbox boot time quá lâu — Codex có tool_timeout_sec mặc định 60s, nếu sandbox boot + thực thi vượt quá đó thì Codex tự đóng
+$stdout = [System.Console]::OpenStandardOutput()
+$writer = [System.IO.StreamWriter]::new($stdout)
+$writer.AutoFlush = $true
+[System.Console]::SetOut($writer)
